@@ -1,0 +1,33 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  MAJOR_MINOR: "1.0"
+  APP_VERSION: "$MAJOR_MINOR.$CI_PIPELINE_IID"
+
+default:
+  tags:
+    - debian
+
+test:
+  stage: test
+  script:
+    - >
+      docker run --rm -e PYTHONDONTWRITEBYTECODE=1
+      -v "$PWD":/app:ro -w /app python:3.12-slim
+      sh -c "pip install -q -r requirements.txt pytest && python -m pytest -p no:cacheprovider -v"
+
+build:
+  stage: build
+  script:
+    - docker build --pull --build-arg APP_VERSION=$APP_VERSION -t calculator:$APP_VERSION -t calculator:latest .
+
+deploy:
+  stage: deploy
+  environment:
+    name: production
+  script:
+    - sh deploy.sh $APP_VERSION
+    - docker image prune -f
