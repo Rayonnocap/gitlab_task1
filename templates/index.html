@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Калькулятор</title>
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background: #222;
+    font-family: sans-serif;
+    color: #fff;
+  }
+  .calc {
+    background: #333;
+    padding: 20px;
+    border-radius: 10px;
+    width: 260px;
+  }
+  input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    font-size: 18px;
+    border-radius: 5px;
+    border: none;
+    box-sizing: border-box;
+  }
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  button {
+    padding: 12px;
+    font-size: 18px;
+    border: none;
+    border-radius: 5px;
+    background: #f90;
+    color: #fff;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #fa0;
+  }
+  .ver {
+    margin-top: 15px;
+    font-size: 12px;
+    color: #888;
+    text-align: right;
+  }
+  #result {
+    font-size: 22px;
+    text-align: right;
+    min-height: 28px;
+  }
+</style>
+</head>
+<body>
+
+<div class="calc">
+  <input id="a" type="number" placeholder="A">
+  <input id="b" type="number" placeholder="B">
+  <div class="buttons">
+    <button onclick="calc('add')">+</button>
+    <button onclick="calc('subtract')">-</button>
+    <button onclick="calc('multiply')">×</button>
+    <button onclick="calc('divide')">÷</button>
+  </div>
+  <div id="result"></div>
+  <div class="ver">v{{ version }}</div>
+</div>
+
+<script>
+  async function calc(op) {
+    const a = document.getElementById('a').value;
+    const b = document.getElementById('b').value;
+    const res = await fetch('/' + op, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({a, b})
+    });
+    const data = await res.json();
+    document.getElementById('result').textContent = data.error ?? data.result;
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+node_modules/
+frontend/dist/
+*.json.bak
+*-report.json
+*-report.jsonl
+trivy-*.json
+semgrep-report.json
+bandit-report.json
+nuclei-report.jsonl

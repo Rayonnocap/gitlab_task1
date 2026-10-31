@@ -1,0 +1,16 @@
+{
+  "name": "calculator-pro-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "\"Pro\" режим калькулятора на Next.js (App Router). Отдельный сервис, не часть основного Flask-калькулятора.",
+  "scripts": {
+    "dev": "next dev -p 4000",
+    "build": "next build",
+    "start": "next start -p 4000"
+  },
+  "dependencies": {
+    "next": "15.5.6",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  }
+}

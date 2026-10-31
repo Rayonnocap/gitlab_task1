@@ -1,0 +1,5 @@
+.git
+.gitlab-ci.yml
+deploy.sh
+tests
+__pycache__

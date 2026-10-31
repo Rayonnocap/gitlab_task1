@@ -1,0 +1,20 @@
+services:
+  calculator:
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
+    image: calculator:${APP_VERSION:-latest}
+    container_name: calculator
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    privileged: true
+
+  calculator-pro:
+    build: ./frontend
+    image: calculator-pro:${APP_VERSION:-latest}
+    container_name: calculator-pro
+    restart: unless-stopped
+    ports:
+      - "4000:4000"

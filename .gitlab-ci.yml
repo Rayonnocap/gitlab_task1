@@ -1,0 +1,105 @@
+stages:
+  - test
+  - build
+  - security
+  - deploy
+
+variables:
+  MAJOR_MINOR: "1.0"
+  APP_VERSION: "$MAJOR_MINOR.$CI_PIPELINE_IID"
+
+default:
+  tags:
+    - debian
+
+test:
+  stage: test
+  script:
+    - >
+      docker run --rm -e PYTHONDONTWRITEBYTECODE=1
+      -v "$PWD":/app:ro -w /app python:3.12-slim
+      sh -c "pip install -q -r requirements.txt pytest && python -m pytest -p no:cacheprovider -v"
+
+build:
+  stage: build
+  script:
+    - docker build --pull --build-arg APP_VERSION=$APP_VERSION -t calculator:$APP_VERSION -t calculator:latest .
+
+build_frontend:
+  stage: build
+  script:
+    - docker build --pull -t calculator-pro:$APP_VERSION -t calculator-pro:latest ./frontend
+
+semgrep:
+  stage: security
+  allow_failure: true
+  script:
+    - >
+      docker run --rm -v "$PWD":/src -w /src returntocorp/semgrep
+      semgrep scan --config=auto --json --output=semgrep-report.json .
+  artifacts:
+    when: always
+    paths:
+      - semgrep-report.json
+    expire_in: 1 week
+
+trivy:
+  stage: security
+  needs: ["build", "build_frontend"]
+  allow_failure: true
+  script:
+    - >
+      docker run --rm -v "$PWD":/src aquasec/trivy fs
+      --scanners vuln --format json --output /src/trivy-deps-report.json /src
+    - >
+      docker run --rm -v "$PWD":/src aquasec/trivy config
+      --format json --output /src/trivy-config-report.json /src
+    - >
+      docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":/src aquasec/trivy
+      image --severity HIGH,CRITICAL --format json --output /src/trivy-image-calculator.json calculator:$APP_VERSION
+    - >
+      docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":/src aquasec/trivy
+      image --severity HIGH,CRITICAL --format json --output /src/trivy-image-calculator-pro.json calculator-pro:$APP_VERSION
+    - docker run --rm -v "$PWD":/src aquasec/trivy fs --scanners vuln /src
+    - docker run --rm -v "$PWD":/src aquasec/trivy config /src
+    - docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --severity HIGH,CRITICAL calculator:$APP_VERSION
+    - docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --severity HIGH,CRITICAL calculator-pro:$APP_VERSION
+  artifacts:
+    when: always
+    paths:
+      - trivy-deps-report.json
+      - trivy-config-report.json
+      - trivy-image-calculator.json
+      - trivy-image-calculator-pro.json
+    expire_in: 1 week
+
+nuclei:
+  stage: security
+  needs: ["build", "build_frontend"]
+  allow_failure: true
+  script:
+    - docker rm -f calc-nuclei-scan calc-pro-nuclei-scan 2>/dev/null || true
+    - docker run -d --name calc-nuclei-scan -p 5055:5000 calculator:$APP_VERSION
+    - docker run -d --name calc-pro-nuclei-scan -p 4055:4000 calculator-pro:$APP_VERSION
+    - sleep 5
+    - >
+      docker run --rm --network host -v "$PWD":/out projectdiscovery/nuclei
+      -target http://localhost:5055 -update-templates -jsonl -o /out/nuclei-report.jsonl
+    - >
+      docker run --rm --network host -v "$PWD":/out projectdiscovery/nuclei
+      -target http://localhost:4055 -update-templates -jsonl -o /out/nuclei-report-pro.jsonl
+    - docker rm -f calc-nuclei-scan calc-pro-nuclei-scan
+  artifacts:
+    when: always
+    paths:
+      - nuclei-report.jsonl
+      - nuclei-report-pro.jsonl
+    expire_in: 1 week
+
+deploy:
+  stage: deploy
+  environment:
+    name: production
+  script:
+    - sh deploy.sh $APP_VERSION
+    - docker image prune -f
