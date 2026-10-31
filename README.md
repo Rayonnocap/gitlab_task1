@@ -46,39 +46,6 @@
 4. **deploy** - `deploy.sh` через `docker compose` поднимает новую версию,
    проверяет `/version`, если не поднялась - откатывается на прошлую
 
-Версия = `MAJOR_MINOR.номер_пайплайна`, например `1.0.12`. `MAJOR_MINOR`
-лежит в начале `.gitlab-ci.yml`, номер ставится сам. Версия видна в углу
-калькулятора и на `/version`.
-
-### Настройка Debian-машины
-
-    sudo apt update
-    sudo apt install -y git curl docker.io docker-compose-plugin
-    sudo systemctl enable --now docker
-
-    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
-    sudo apt install -y gitlab-runner
-    sudo usermod -aG docker gitlab-runner
-    sudo rm -f /home/gitlab-runner/.bash_logout   # на debian иначе джобы падают
-
-Создать раннер: проект в GitLab -> Settings -> CI/CD -> Runners ->
-New project runner, тег `debian`, скопировать токен (`glrt-...`).
-
-    sudo gitlab-runner register --non-interactive \
-      --url https://gitlab.com \
-      --token glrt-XXXXXXXX \
-      --executor shell
-    sudo gitlab-runner verify
-
-Если GitLab свой, в `--url` его адрес.
-
-### Git
-
-    git init -b main
-    git add .
-    git commit -m "calculator"
-    git remote add origin git@gitlab.com:<user>/calculator.git
-    git push -u origin main
 
 После пуша в main пайплайн сам все прогонит и обновит контейнер на машине.
 Проверить: `curl http://<ip-машины>:5000/version`
